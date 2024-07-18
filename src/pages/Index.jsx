@@ -1,79 +1,56 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-const HackerNewsTop100 = () => {
-  const [stories, setStories] = useState([]);
+const Index = () => {
+  const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchStories = async () => {
-      try {
-        const topStoriesResponse = await axios.get('https://hacker-news.firebaseio.com/v0/topstories.json');
-        const top100Ids = topStoriesResponse.data.slice(0, 100);
-        
-        const storyPromises = top100Ids.map(id => 
-          axios.get(`https://hacker-news.firebaseio.com/v0/item/${id}.json`)
-        );
-        
-        const storyResponses = await Promise.all(storyPromises);
-        const fetchedStories = storyResponses.map(response => response.data);
-        
-        setStories(fetchedStories);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching stories:', error);
-        setLoading(false);
-      }
-    };
-
-    fetchStories();
+    fetchPosts();
   }, []);
 
-  const filteredStories = stories.filter(story =>
-    story.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const fetchPosts = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('https://jsonplaceholder.typicode.com/posts?_limit=5');
+      if (!response.ok) {
+        throw new Error('Failed to fetch posts');
+      }
+      const data = await response.json();
+      setPosts(data);
+      setError(null);
+    } catch (err) {
+      setError('An error occurred while fetching posts.');
+      setPosts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-6">Hacker News Top 100 Stories</h1>
+      <h1 className="text-3xl font-bold mb-4">Latest Posts</h1>
+      <Button onClick={fetchPosts} className="mb-4">Refresh Posts</Button>
       
-      <Input
-        type="text"
-        placeholder="Search stories..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="mb-4"
-      />
-
-      {loading ? (
-        <div className="space-y-4">
-          {[...Array(10)].map((_, index) => (
-            <Skeleton key={index} className="h-20 w-full" />
-          ))}
-        </div>
-      ) : (
-        <ul className="space-y-4">
-          {filteredStories.map(story => (
-            <li key={story.id} className="border p-4 rounded-lg">
-              <h2 className="text-xl font-semibold">{story.title}</h2>
-              <p className="text-sm text-gray-600 mt-1">Upvotes: {story.score}</p>
-              <Button
-                variant="link"
-                className="mt-2 p-0"
-                onClick={() => window.open(story.url, '_blank')}
-              >
-                Read more
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
+      {loading && <p>Loading posts...</p>}
+      {error && <p className="text-red-500">{error}</p>}
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {posts.map(post => (
+          <Card key={post.id}>
+            <CardHeader>
+              <CardTitle>{post.title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p>{post.body}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 };
 
-export default HackerNewsTop100;
+export default Index;
